@@ -61,13 +61,13 @@ func (clc *CaptnLogCommand) Run(args []string) int {
 
 var (
 	ReadCommand = CaptnLogCommand{
-		help:     "help",
-		synopsis: "synopsis",
+		help:     "TODO",
+		synopsis: "read entries in your captain's log",
 		cmdId:    ReadCmd,
 	}
 	WriteCommand = CaptnLogCommand{
-		help:     "help",
-		synopsis: "synopsis",
+		help:     "TODO",
+		synopsis: "write an entry to your captain's log",
 		cmdId:    WriteCmd,
 	}
 )
