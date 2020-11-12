@@ -4,12 +4,17 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"text/tabwriter"
 	"time"
+
+	"github.com/mitchellh/cli"
 )
 
 var (
 	ErrInvalidCommand = errors.New("invalid command")
+
+	ui = cli.BasicUi{}
 )
 
 type CmdID uint
@@ -17,6 +22,7 @@ type CmdID uint
 const (
 	WriteCmd CmdID = iota
 	ReadCmd
+	ReadAllCmd
 )
 
 type CaptnLogCommand struct {
@@ -43,20 +49,33 @@ func (clc *CaptnLogCommand) Run(args []string) int {
 	case ReadCmd:
 		logs, err := clc.captnLog.ReadEntries(clc.category)
 		if err != nil {
+			ui.Error(err.Error())
 			return 1
 		}
-		tw := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', tabwriter.AlignRight)
-		fmt.Fprintln(tw, "timestamp\tentry\t")
-		for _, log := range logs {
-			fmt.Fprintf(tw, "%s\t%s\t\n", log.Timestamp.Format(time.Stamp), log.Entry)
+		printLogs(logs)
+	case ReadAllCmd:
+		logs, err := clc.captnLog.ReadAllEntries()
+		if err != nil {
+			ui.Error(err.Error())
+			return 1
 		}
-		tw.Flush()
+		printLogs(logs)
 	}
 	if err != nil {
-		fmt.Println(err)
+		ui.Error(err.Error())
 		return 1
 	}
 	return 0
+}
+
+func printLogs(logs Logs) {
+	sort.Sort(logs)
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', tabwriter.AlignRight)
+	fmt.Fprintln(tw, "timestamp\tentry\tcategory\t")
+	for _, log := range logs {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t\n", log.Timestamp.Format(time.Stamp), log.Entry, log.Category)
+	}
+	tw.Flush()
 }
 
 var (
@@ -69,5 +88,10 @@ var (
 		help:     "TODO",
 		synopsis: "write an entry to your captain's log",
 		cmdId:    WriteCmd,
+	}
+	ReadAllCommand = CaptnLogCommand{
+		help:     "TODO",
+		synopsis: "read all entries in all categories",
+		cmdId:    ReadAllCmd,
 	}
 )

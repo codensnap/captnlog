@@ -18,12 +18,13 @@ const (
 
 var (
 	configBkt      = []byte("config")
+	entryBkt       = []byte("entries")
 	defaultBkt     = []byte("default")
 	categorizedBkt = []byte("categorized")
 
 	initBuckets = [][]byte{
 		configBkt,
-		defaultBkt,
+		entryBkt,
 		categorizedBkt,
 	}
 )
@@ -86,10 +87,10 @@ func (cl *CaptnLog) CommandFactory(cmdId CmdID, category string) func() (cli.Com
 		clc = WriteCommand
 	case ReadCmd:
 		clc = ReadCommand
+	case ReadAllCmd:
+		clc = ReadAllCommand
 	default:
-		return func() (cli.Command, error) {
-			return nil, ErrInvalidCommand
-		}
+		panic("No")
 	}
 	clc.captnLog = cl
 	clc.category = category
@@ -112,9 +113,13 @@ func (cl *CaptnLog) WriteEntry(category, entry string) error {
 		"category", category,
 		"entry", entry)
 	return cl.bdb.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket([]byte(category))
+		entryBkt := tx.Bucket(entryBkt)
+		if entryBkt == nil {
+			return ErrNoBucket
+		}
+		bkt := entryBkt.Bucket([]byte(category))
 		if bkt == nil {
-			newBkt, err := tx.CreateBucket([]byte(category))
+			newBkt, err := entryBkt.CreateBucket([]byte(category))
 			if err != nil {
 				return err
 			}
@@ -136,7 +141,11 @@ func (cl *CaptnLog) ReadEntries(category string) ([]*Log, error) {
 	logs := []*Log{}
 	cl.lgr.Debug("reading entries in " + category)
 	err := cl.bdb.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket([]byte(category))
+		entryBkt := tx.Bucket(entryBkt)
+		if entryBkt == nil {
+			return ErrNoBucket
+		}
+		bkt := entryBkt.Bucket([]byte(category))
 		if bkt == nil {
 			return ErrNoBucket
 		}
@@ -148,6 +157,33 @@ func (cl *CaptnLog) ReadEntries(category string) ([]*Log, error) {
 			}
 			logs = append(logs, log)
 			return nil
+		})
+		return nil
+	})
+	return logs, err
+}
+
+func (cl *CaptnLog) ReadAllEntries() ([]*Log, error) {
+	cl.lgr.Debug("reading all")
+	logs := []*Log{}
+	err := cl.bdb.View(func(tx *bolt.Tx) error {
+		entryBkt := tx.Bucket(entryBkt)
+		if entryBkt == nil {
+			return ErrNoBucket
+		}
+		entryBkt.ForEach(func(k, v []byte) error {
+			if v != nil {
+				return nil
+			}
+			bkt := entryBkt.Bucket(k)
+			return bkt.ForEach(func(k, v []byte) error {
+				log, err := DecodeLog(v)
+				if err != nil {
+					return err
+				}
+				logs = append(logs, log)
+				return nil
+			})
 		})
 		return nil
 	})
