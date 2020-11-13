@@ -19,9 +19,10 @@ func main() {
 	c := cli.NewCLI("captnlog", "0.0.1")
 	c.Args = flag.Args()
 	c.Commands = map[string]cli.CommandFactory{
-		"write":    cl.CommandFactory(WriteCmd, *category),
-		"read":     cl.CommandFactory(ReadCmd, *category),
-		"read all": cl.CommandFactory(ReadAllCmd, ""),
+		"write":     cl.CommandFactory(WriteCmd, *category),
+		"read":      cl.CommandFactory(ReadCmd, *category),
+		"read all":  cl.CommandFactory(ReadAllCmd, ""),
+		"count all": cl.CommandFactory(CountAllCmd, ""),
 	}
 	if _, ok := c.Commands[c.Subcommand()]; !ok {
 	}

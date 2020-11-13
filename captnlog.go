@@ -89,6 +89,8 @@ func (cl *CaptnLog) CommandFactory(cmdId CmdID, category string) func() (cli.Com
 		clc = ReadCommand
 	case ReadAllCmd:
 		clc = ReadAllCommand
+	case CountAllCmd:
+		clc = CountAllCommand
 	default:
 		panic("No")
 	}
@@ -188,4 +190,33 @@ func (cl *CaptnLog) ReadAllEntries() ([]*Log, error) {
 		return nil
 	})
 	return logs, err
+}
+
+func (cl *CaptnLog) CountAllEntries() (int, error) {
+	count := 0
+	//cl.lgr.Debug("counting all")
+	logs := []*Log{}
+	err := cl.bdb.View(func(tx *bolt.Tx) error {
+		entryBkt := tx.Bucket(entryBkt)
+		if entryBkt == nil {
+			return ErrNoBucket
+		}
+		entryBkt.ForEach(func(k, v []byte) error {
+			if v != nil {
+				return nil
+			}
+			bkt := entryBkt.Bucket(k)
+			return bkt.ForEach(func(k, v []byte) error {
+				log, err := DecodeLog(v)
+				if err != nil {
+					return err
+				}
+				logs = append(logs, log)
+				count++
+				return nil
+			})
+		})
+		return nil
+	})
+	return count, err
 }

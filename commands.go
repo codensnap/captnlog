@@ -23,6 +23,7 @@ const (
 	WriteCmd CmdID = iota
 	ReadCmd
 	ReadAllCmd
+	CountAllCmd
 )
 
 type CaptnLogCommand struct {
@@ -60,6 +61,13 @@ func (clc *CaptnLogCommand) Run(args []string) int {
 			return 1
 		}
 		printLogs(logs)
+	case CountAllCmd:
+		TotalLogs, err := clc.captnLog.CountAllEntries()
+		if err != nil {
+			ui.Error(err.Error())
+			return 1
+		}
+		printTotalLogs(TotalLogs)
 	}
 	if err != nil {
 		ui.Error(err.Error())
@@ -78,6 +86,13 @@ func printLogs(logs Logs) {
 	tw.Flush()
 }
 
+func printTotalLogs(TotalLogs int) {
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', tabwriter.AlignRight)
+	fmt.Fprintln(tw, "TotalLogs")
+	fmt.Fprintf(tw, "%d\n", TotalLogs)
+	tw.Flush()
+}
+
 var (
 	ReadCommand = CaptnLogCommand{
 		help:     "TODO",
@@ -93,5 +108,10 @@ var (
 		help:     "TODO",
 		synopsis: "read all entries in all categories",
 		cmdId:    ReadAllCmd,
+	}
+	CountAllCommand = CaptnLogCommand{
+		help:     "TODO",
+		synopsis: "count all entries in all categories",
+		cmdId:    CountAllCmd,
 	}
 )
